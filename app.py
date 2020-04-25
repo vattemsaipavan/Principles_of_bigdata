@@ -4,6 +4,7 @@ from pyspark.sql import SparkSession
 import matplotlib.pyplot as plt
 import pandas
 from io import BytesIO
+from wordcloud import WordCloud
 
 app = Flask(__name__)
 
@@ -16,8 +17,7 @@ def hello(id):
             "place.country ORDER BY count "
             "DESC limit 10")
         pd_query1 = query1.toPandas()
-        pd_query1.plot.pie(y='Count', labels=pd_query1.country.values.tolist(), figsize=(10, 5), autopct='%.2f',
-                           title="Tweet count from different countries")
+        pd_query1.plot.pie(y='Count', labels=pd_query1.country.values.tolist(), figsize=(10, 5), autopct='%.2f')
         img = BytesIO()
         plt.savefig(img)
         img.seek(0)
@@ -28,7 +28,7 @@ def hello(id):
             "from tweet_table where retweeted_status.retweet_count is not null order by "
             "retweeted_status.retweet_count desc limit 10")
         pd_query2 = query2.toPandas()
-        pd_query2.plot(title="top tweeted text and its retweet count")
+        pd_query2.plot()
         img = BytesIO()
         plt.savefig(img)
         img.seek(0)
@@ -38,8 +38,7 @@ def hello(id):
                            "place.country='United States'and "
                            "user.location is not null Group By user.location ORDER BY tweet_count DESC LIMIT 15")
         pd_query3 = query3.toPandas()
-        pd_query3.plot.area(x="location", y="tweet_count", title="Tweets based on the different location in USA",
-                            figsize=(11, 5))
+        pd_query3.plot.area(x="location", y="tweet_count", figsize=(11, 5))
         img = BytesIO()
         plt.savefig(img)
         img.seek(0)
@@ -48,8 +47,8 @@ def hello(id):
         query4 = spark.sql("select user.screen_name,text,retweeted_status.retweet_count from tweet_table order by "
                            "retweeted_status.retweet_count DESC limit 10")
         pd_query4 = query4.toPandas()
-        pd_query4.plot.scatter(x="retweet_count", y='screen_name', color='DarkBlue', s=50, figsize=(10, 10))
-        plt.title("Users with more no of retweets for his tweet")
+        pd_query4.plot.scatter(x="retweet_count", y='screen_name', color='DarkBlue', s=50, figsize=(5,5))
+        # plt.title("Users with more no of retweets for his tweet")
         img = BytesIO()
         plt.savefig(img)
         img.seek(0)
@@ -65,8 +64,8 @@ def hello(id):
             " end as text from "
             " tweet_table)q group by q.text")
         pd_query5 = query5.toPandas()
-        sns.catplot(y="text", x="count", kind="swarm", data=pd_query5.dropna())
-        plt.title("Tweets based on the different league matches")
+        sns.catplot(x="text", y="count", kind="swarm", data=pd_query5.dropna(),aspect=3)
+        # plt.title("Tweets based on the different league matches")
         img = BytesIO()
         plt.savefig(img)
         img.seek(0)
@@ -77,7 +76,7 @@ def hello(id):
             " like '%football%' group by user.screen_name, user.lang order by followers_count desc limit 10")
         pd_query6 = query6.toPandas()
         sns.catplot(x="screen_name", y="followers_count", kind="violin", data=pd_query6, height=5, aspect=3)
-        plt.title("User with more no of followers")
+        # plt.title("User with more no of followers")
         img = BytesIO()
         plt.savefig(img)
         img.seek(0)
@@ -90,7 +89,7 @@ def hello(id):
             "source like '%Twitter for iPad%' UNION select count() as NumberOfTweets, 'Web' as Source from "
             "tweet_table where source like '%Twitter Web App%'")
         pd_query7 = query7.toPandas()
-        pd_query7.plot.line(y="NumberOfTweets", x="Source", title="Tweets from different Sources")
+        pd_query7.plot.line(y="NumberOfTweets", x="Source")
         img = BytesIO()
         plt.savefig(img)
         img.seek(0)
@@ -114,8 +113,7 @@ def hello(id):
         query8 = spark.sql("SELECT day1 as Day,Count(*) as Day_Count from days_final where day1 is not null group by "
                            "day1 order by count(*) desc")
         pd_query8 = query8.toPandas()
-        pd_query8.plot.pie(y="Day_Count", labels=pd_query8.Day.tolist(), autopct='%.2f',
-                           title="On which Day More Tweets are posted")
+        pd_query8.plot.pie(y="Day_Count", labels=pd_query8.Day.tolist(), autopct='%.2f')
         img = BytesIO()
         plt.savefig(img)
         img.seek(0)
@@ -145,6 +143,26 @@ def hello(id):
         pd_query10 = query10.toPandas()
         sns.catplot(x="hour", y="tweets_count", kind="violin", style="smoker", split=True, data=pd_query10)
         # plt.title("Tweet count on hourly bases")
+        img = BytesIO()
+        plt.savefig(img)
+        img.seek(0)
+        return send_file(img, mimetype='image/png')
+    if id == "11":
+        query11 = spark.sql(
+            "select count(*) as count,text from tweet_table where text like '%football%' group by text order by count "
+            "desc limit 20")
+        pdquery11 = query11.toPandas()
+        train_text = " ".join(pdquery11.text)
+        wordcloud = WordCloud().generate(train_text)
+        plt.figure()
+        plt.subplots(figsize=(50, 50))
+        wordcloud = WordCloud(
+            background_color="Black",
+            max_words=len(train_text),
+            max_font_size=30,
+            relative_scaling=.5).generate(train_text)
+        plt.imshow(wordcloud)
+        plt.axis("off")
         img = BytesIO()
         plt.savefig(img)
         img.seek(0)
